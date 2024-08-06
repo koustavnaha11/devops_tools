@@ -1,0 +1,130 @@
+                                      PROJECT NAME :-
+                       (Deploy LoginWebApp.war to Nexus repository)
+                 CONTINIOUS INTEGRATION PROJECT PIPELINE FROM JENKINS TO NEXUS
+
+--------------------------------------------------------------
+This project need a three server 
+1)	Jenkins server (t2.micro) 
+2)	SonarQube server (t2.medium)
+3)	Nexus server (t2.medium)
+--------------------------------------------------------------------------
+Start Configuration of Jenkins Server :-
+Step-1) install java -17 
+Command:-  yum install java-17 –y 
+--------------------------------------------------------------------------
+Step-2) install Jenkins on official jenkins website (https://www.jenkins.io/doc/book/installing/linux/#red-hat-centos)
+Command:-  sudo wget -O /etc/yum.repos.d/jenkins.repo \
+https://pkg.jenkins.io/redhat-stable/jenkins.repo
+sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+sudo yum upgrade
+# Add required dependencies for the jenkins package
+sudo yum install jenkins
+sudo systemctl daemon-reload
+--------------------------------------------------------------------------
+Step-3) Configure Jenkins 
+Step-4) Install git in Jenkins machine 
+Command:- yum install git –y 
+Command :- git init           -------------------- (after installation of git on Jenkins machine)
+--------------------------------------------------------------------------
+Step-5) Install maven 
+Command:- https://dlcdn.apache.org/maven/maven-3/3.9.8/binaries/apache-maven-3.9.8-bin.zip
+		Unzip using 
+>>> sudo unzip https://dlcdn.apache.org/maven/maven-3/3.9.8/binaries/apache-maven-3.9.8-bin.zip
+>>> Set Maven Path :
+>>> go to .bash_profile >>> HOME:/opt/apache-maven-3.9.8
+>>> refresh this settings >>>> sudo source .bash_profile
+----------------------------------------------------------------------------
+Start Configuration Of SonarQube:-
+>>> first we inside ec2-user >>> cd /home/ec2-user
+Step-1:-  install sonarqube form official website 
+(https://binaries.sonarsource.com/Distribution/sonarqube/sonarqube-9.9.6.92038.zip)
+Command:- unzip sonarqube >>> unzip <paste above link here>
+Command:- go to >>> cd /sonarqube-9.9.6.92038 
+                >>> cd bin >>> cd <choose operating system of your server> 
+                >>> sudo sh sonar.sh console ( to start the sonarqube)
+---------------------------------------------------------------------------------
+Start Configuration Of Nexus:-
+Step 1: Login to your Linux server and update the yum packages. Also install required utilities.
+---------------------------------------------------------------------------------
+sudo yum update -y 
+---------------------------------------------------------------------------------
+Step 2: Install OpenJDK 1.8
+sudo yum install java-1.8.0-openjdk.x86_64 –y
+---------------------------------------------------------------------------------
+Step 3: Create a directory named app and cd into the directory.
+sudo cd /opt
+---------------------------------------------------------------------------------
+Step 4: Download the latest nexus. You can get the latest download links fo for nexus
+sudo wget -O nexus.tar.gz https://download.sonatype.com/nexus/3/nexus-3.69.0-02-java8-unix.tar.gz
+---------------------------------------------------------------------------------
+Untar the downloaded file
+sudo tar -xvf nexus.tar.gz
+----------------------------------------------------------------------------------
+Rename the untared file to nexus.
+sudo mv nexus-3* nexus
+---------------------------------------------------------------------------------
+Step 5: As a good security practice, it is not advised to run nexus service with root privileges. So create a new user named nexus to run the nexus service.
+sudo adduser nexus
+---------------------------------------------------------------------------------
+Change the ownership of nexus files and nexus data directory to nexus user.
+sudo chown -R nexus:nexus /app/nexus 
+sudo chown -R nexus:nexus /app/sonatype-work
+---------------------------------------------------------------------------------
+Step 6: Open /opt/nexus/bin/nexus.rc file
+sudo vi /opt/nexus/bin/nexus.rc
+Uncomment run_as_user parameter and set it as following.
+run_as_user="nexus"
+Create a nexus systemd unit file.
+sudo vi /etc/systemd/system/nexus.service
+Add the following contents to the unit file.
+-------------------------------------------------
+[Unit]
+Description=nexus service
+After=network.target
+[Service]
+Type=forking
+LimitNOFILE=65536
+User=nexus
+Group=nexus
+ExecStart=/opt/nexus/bin/nexus start
+ExecStop=/opt/nexus/bin/nexus stop
+User=nexus
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target
+-------------------------------------------------------
+Execute the following command to add nexus service to boot.
+-------------------------------------------------------
+sudo chkconfig nexus on
+-------------------------------------------------------
+To start the Nexus service, use the following command. If you are having trouble starting nexus, please check the troubleshooting section below.
+-------------------------------------------------------
+sudo systemctl start nexus
+------------------------------------------------------------------------------------------------------------------------------------------------
+NEXUS SERVER SETTING :- (in project-- pom.xml file)
+-----------------------------------------------------------------------------------
+<distributionManagement>
+	  <repository>
+		  <id>nexus</id>
+		  <name>samplerepo</name>
+		  <url>http://13.201.70.73:8081/repository/samplerepo/</url>
+	  </repository>
+
+	  <snapshotRepository>
+		<id>nexus</id>
+		<name>samplerepo</name>
+		 <url>http://13.201.70.73:8081/repository/samplerepo/</url>  
+	  </snapshotRepository>
+  </distributionManagement>
+------------------------------------------------------------------------------------
+NEXUS SERVER SETTING :- (in project-- cd /apache-maven-9.8.8/conf/setting.xml file)
+------------------------------------------------------------------------------------
+    <server>
+            <id>nexus</id>
+            <username>------</username>
+            <password>------</password>
+    </server>
+
+
+       
